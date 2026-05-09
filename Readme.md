@@ -4,7 +4,7 @@ The dataset and final model files for this project exceed GitHub’s file size l
 
 ## Introduction
 
-This project identifies protein binding sites within the human genome by leveraging transformer-based architectures and genomic data processing.
+This project predicts the affinity and strength of affinity of RNA binding proteins, especially the TPD43 protein, by leveraging transformer-based architectures and genomic data processing.
 
 ## Model Architecture
 
