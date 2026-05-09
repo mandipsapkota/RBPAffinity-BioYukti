@@ -1,4 +1,4 @@
-The required resources for this project can be found here: 
+The dataset required for this project, and the final model that was built can be found here: 
 
 # Introduction
 This project ...
