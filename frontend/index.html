@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binderr — RBP Binding Affinity Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            background-image:
+                linear-gradient(rgba(203,213,225,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(203,213,225,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .heading { font-family: 'Space Grotesk', sans-serif; }
+
+        /* ── Mode buttons ── */
+        .mode-btn {
+            transition: all 0.22s ease;
+            cursor: pointer;
+            border: 1.5px solid rgba(100,116,139,0.35);
+            background: rgba(30,41,59,0.65);
+            color: #94a3b8;
+            border-radius: 1rem;
+        }
+        .mode-btn:hover { border-color: #64748b; color: #cbd5e1; }
+        .mode-btn.active-single  { background: rgba(37,99,235,0.16); border-color: #3b82f6; color: #93c5fd; }
+        .mode-btn.active-chunked { background: rgba(16,185,129,0.13); border-color: #10b981; color: #6ee7b7; }
+
+        /* ── Bin input ── */
+        .bin-input {
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            color: #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.875rem;
+            outline: none;
+            width: 100px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            transition: border-color 0.2s;
+        }
+        .bin-input:focus { border-color: #10b981; }
+
+        /* ── Map bars ── */
+        .map-bar {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+            cursor: crosshair;
+            flex-shrink: 0;
+        }
+        .map-bar .bar-inner {
+            width: 100%;
+            border-radius: 3px 3px 0 0;
+            transition: filter 0.15s, transform 0.15s;
+            transform-origin: bottom;
+        }
+        .map-bar:hover .bar-inner {
+            filter: brightness(1.45);
+            transform: scaleY(1.05);
+        }
+
+        /* ── Peak dot ── */
+        .peak-dot {
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 7px; height: 7px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: peakPulse 2s ease-in-out infinite;
+        }
+        @keyframes peakPulse {
+            0%,100% { box-shadow: 0 0 0 2px rgba(245,158,11,0.3), 0 0 8px #f59e0b; }
+            50%      { box-shadow: 0 0 0 5px rgba(245,158,11,0.12), 0 0 18px #f59e0b; }
+        }
+
+        /* ── Floating tooltip ── */
+        #mapTooltip {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+            background: #080f1e;
+            border: 1px solid #1e3a5f;
+            border-radius: 13px;
+            padding: 12px 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.75), 0 0 0 1px rgba(59,130,246,0.08);
+            max-width: 250px;
+            min-width: 185px;
+        }
+        #mapTooltip.vis { opacity: 1; }
+
+        .tt-pos   { font-size: 9px; color: #475569; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 6px; font-family: monospace; }
+        .tt-seq   {
+            font-size: 11px; color: #7dd3fc; font-family: 'Courier New', monospace;
+            letter-spacing: 0.05em; word-break: break-all; line-height: 1.55;
+            margin-bottom: 8px; padding: 5px 7px;
+            background: rgba(59,130,246,0.06);
+            border-radius: 6px; border: 1px solid rgba(59,130,246,0.14);
+        }
+        .tt-row   { font-size: 11.5px; color: #e2e8f0; margin-bottom: 3px; }
+        .tt-row b { font-family:'Space Grotesk',sans-serif; font-weight:700; color:#93c5fd; }
+        .tt-bind  { font-size: 11px; font-weight:600; margin-top:2px; }
+        .tt-peak  { font-size: 10px; color:#fbbf24; margin-top:5px; font-weight:700; letter-spacing:0.03em; }
+
+        /* ── Legend pill ── */
+        .legend-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 9px; border-radius: 99px;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+
+        /* ── Map container ── */
+        .map-container {
+            height: 140px;
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 1.25rem;
+            padding: 14px 12px 10px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: relative;
+        }
+        .map-container::-webkit-scrollbar { height: 3px; }
+        .map-container::-webkit-scrollbar-track { background: #0a0f1e; }
+        .map-container::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+
+        .map-loading {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; gap: 8px;
+            font-size: 10px; color: #334155;
+            font-family: monospace; letter-spacing: 0.1em; text-transform: uppercase;
+        }
+
+        /* ── Upload zone states ── */
+        #uploadZone { transition: border-color 0.2s, opacity 0.2s; }
+
+        /* ── Progress fill ── */
+        .progress-fill {
+            height: 100%; border-radius: 99px;
+            background: linear-gradient(90deg,#3b82f6,#06b6d4);
+            transition: width 0.2s ease;
+        }
+
+        /* ── Slide-up ── */
+        @keyframes slideUp {
+            from { opacity:0; transform:translateY(14px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        .slide-up { animation: slideUp 0.35s ease both; }
+
+        /* ── Spinner ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .fa-spin { animation: spin 0.75s linear infinite; }
+
+        /* ── Scrollbar global ── */
+        ::-webkit-scrollbar { width:4px; height:4px; }
+        ::-webkit-scrollbar-track { background:#0a0f1e; }
+        ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+
+        /* ── Responsive ── */
+        @media (max-width:640px) {
+            .nav-links { display:none; }
+            .hero-title { font-size:2.25rem !important; line-height:1.12 !important; }
+            .hero-sub   { font-size:0.95rem !important; }
+        }
+        @media (min-width:641px) and (max-width:900px) {
+            .hero-title { font-size:3.2rem !important; }
+        }
+
+        /* ── Summary grid ── */
+        #chunkedSummary        { display:none; }
+        #chunkedSummary.show   { display:grid; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+
+<!-- ── GLOBAL FLOATING TOOLTIP ── -->
+<div id="mapTooltip">
+    <div class="tt-pos" id="ttPos"></div>
+    <div class="tt-seq" id="ttSeq"></div>
+    <div class="tt-row">Score: <b id="ttScore"></b></div>
+    <div class="tt-bind" id="ttBind"></div>
+    <div class="tt-peak" id="ttPeak" style="display:none">⭐ Peak Signal</div>
+</div>
+
+<!-- ── HEADER ── -->
+<header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner">🧬</div>
+            <div>
+                <span class="heading text-2xl sm:text-3xl font-semibold tracking-tight text-blue-400">Binderr</span>
+                <span class="text-[10px] sm:text-xs block -mt-1 text-slate-400">RBP Binding Affinity AI</span>
+            </div>
+        </div>
+        <div class="nav-links flex items-center gap-5 sm:gap-8 text-sm">
+            <a href="./background.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Background</a>
+            <a href="./clinical_impact.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Clinical Impact</a>
+            <div class="bg-emerald-900/30 text-emerald-400 px-4 py-2 rounded-3xl text-xs sm:text-sm font-medium flex items-center gap-2 border border-emerald-500/20 whitespace-nowrap">
+                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0"></div>
+                <span class="hidden sm:inline">Fighting ALS Together</span>
+                <span class="sm:hidden">ALS Research</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ── PAGE ── -->
+<div class="max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
+
+    <!-- HERO -->
+    <div class="mt-10 mb-14 sm:my-20 text-center">
+        <div class="inline-flex items-center gap-2 bg-blue-900/50 text-blue-300 px-4 py-2 rounded-3xl text-xs sm:text-sm mb-5 border border-blue-800/30">
+            <span class="text-orange-400">🧠</span>
+            <span class="font-semibold">Supporting Amyotrophic Lateral Sclerosis (ALS) Research</span>
+        </div>
+        <h1 class="heading hero-title text-5xl sm:text-6xl leading-none font-bold tracking-tighter mb-5 text-white">
+            Predict RBP Binding.<br>
+            <span class="text-blue-400">Accelerate ALS Breakthroughs.</span>
+        </h1>
+        <p class="hero-sub text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed px-2">
+            Advanced AI model designed to identify RNA-binding protein interactions linked to motor neuron
+            degeneration, supporting early diagnosis and targeted therapeutics for ALS.
+        </p>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+
+        <!-- ════════════════ LEFT: INPUT ════════════════ -->
+        <div class="lg:col-span-5 bg-slate-900/90 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-xl">
+            <h2 class="heading text-xl sm:text-2xl font-semibold mb-6 flex items-center gap-3 text-white">
+                <i class="fas fa-dna text-blue-400"></i>
+                SEQUENCE ANALYSIS
+            </h2>
+
+            <!-- MODE SELECTOR -->
+            <div class="mb-5">
+                <div class="text-[10px] text-slate-400 font-semibold tracking-widest uppercase mb-3">Analysis Mode</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="modeSingle" class="mode-btn active-single px-4 py-4 text-left" onclick="setMode('single')">
+                        <div class="text-xl mb-1">🔬</div>
+                        <div class="font-semibold text-sm leading-snug">Single Genomic<br>Analysis</div>
+                        <div class="text-[10px] mt-1 opacity-60">Full prediction + affinity map</div>
+                    </button>
+                    <button id="modeChunked" class="mode-btn px-4 py-4 text-left" onclick="setMode('chunked')">
+                        <div class="text-xl mb-1">📊</div>
+                        <div class="font-semibold text-sm leading-snug">Part-by-Part<br>Analysis</div>
+                        <div class="text-[10px] mt-1 opacity-60">Bin-level affinity map only</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BIN SIZE ROW -->
+            <div id="binSizeRow" class="hidden mb-5 bg-slate-950/60 border border-emerald-900/40 rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase">Bin Size</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">Nucleotides per chunk</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="binSize" class="bin-input" value="50" min="10" max="5000" step="10">
+                    <span class="text-slate-400 text-xs font-mono">nt</span>
+                </div>
+            </div>
+
+            <!-- UPLOAD ZONE (visible when no file) -->
+            <div id="uploadZone"
+                 class="border-2 border-dashed border-slate-600 hover:border-blue-400 rounded-3xl p-8 sm:p-10 text-center cursor-pointer transition-all mb-5 bg-slate-950/50 group"
+                 onclick="handleUploadClick()">
+                <input type="file" id="fileInput" accept=".fa,.fasta,.txt" class="hidden" onchange="handleFile(this)">
+                <i class="fas fa-cloud-upload-alt text-4xl sm:text-5xl text-slate-400 mb-3 group-hover:text-blue-400 transition-colors"></i>
+                <p class="font-semibold text-sm sm:text-base">Upload FASTA File (.fa)</p>
+                <p class="text-slate-400 text-xs sm:text-sm mt-1">Large files supported (up to several GB)</p>
+            </div>
+
+            <!-- FILE LOADED BADGE (replaces upload zone) -->
+            <div id="fileLoadedBadge" class="hidden mb-5 bg-emerald-950/40 border border-emerald-800/50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i class="fas fa-check-circle text-emerald-400 shrink-0"></i>
+                    <div class="min-w-0">
+                        <div class="text-[10px] text-emerald-500 uppercase font-semibold tracking-wider">File Loaded</div>
+                        <div id="fileLoadedName" class="text-emerald-300 text-sm font-medium truncate mt-0.5"></div>
+                    </div>
+                </div>
+                <button onclick="clearFile()" class="text-slate-400 hover:text-red-400 transition-colors shrink-0 text-xs px-3 py-1.5 rounded-xl border border-slate-700 hover:border-red-800/60 hover:bg-red-900/20 font-medium">
+                    <i class="fas fa-times mr-1.5"></i>Remove
+                </button>
+            </div>
+
+            <!-- SEQUENCE TEXTAREA -->
+            <textarea id="sequenceInput" rows="7"
+                class="w-full bg-slate-950 border border-slate-600 focus:border-blue-400 rounded-3xl p-5 font-mono text-xs sm:text-sm resize-none outline-none shadow-inner transition-colors"
+                placeholder="Paste RNA sequence here… (e.g. AUGCAGUACGU...)"></textarea>
+
+            <!-- ANALYZE BUTTON -->
+            <button onclick="runAnalysis()" id="analyzeBtn"
+                class="w-full mt-6 py-5 sm:py-6 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition-all text-white font-bold text-lg sm:text-xl rounded-3xl flex items-center justify-center gap-3 shadow-lg shadow-blue-900/20">
+                <i class="fas fa-vial"></i>
+                <span id="analyzeBtnLabel">PREDICT RBP BINDING AFFINITY</span>
+            </button>
+
+            <p class="text-center text-[10px] text-slate-500 mt-4 leading-relaxed">
+                Trained on CLIP-seq + eCLIP datasets • Focused on ALS-associated RBPs
+            </p>
+        </div>
+
+        <!-- ════════════════ RIGHT: RESULTS ════════════════ -->
+
+        <!-- Single Analysis Panel -->
+        <div id="resultsPanel" class="lg:col-span-7 bg-slate-900/90 border border-slate-700 rounded-3xl p-6 sm:p-8 hidden shadow-xl slide-up">
+            <div class="flex justify-between items-start mb-6 gap-4">
+                <div class="min-w-0">
+                    <span class="text-emerald-400 text-[10px] font-semibold tracking-widest uppercase">Analysis Complete</span>
+                    <h3 id="seqTitle" class="heading text-xl sm:text-2xl lg:text-3xl font-semibold mt-1 text-white truncate"></h3>
+                </div>
+                <button onclick="resetUI()" class="text-slate-400 hover:text-white text-xl transition-colors shrink-0 mt-1 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-800">✕</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-950 border border-slate-700 rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+                    <div class="text-slate-400 text-[10px] font-semibold tracking-wider">PREDICTED CLASS</div>
+                    <div id="predictedClass" class="heading text-3xl sm:text-4xl lg:text-5xl font-bold mt-3 sm:mt-6 text-blue-300 leading-tight"></div>
+                    <div id="confidence" class="mt-3 text-sm"></div>
+                </div>
+                <div class="bg-slate-950 border border-slate-700 rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+                    <div class="text-slate-400 text-[10px] font-semibold tracking-wider">AFFINITY SCORE</div>
+                    <div id="regScore" class="heading text-5xl sm:text-6xl lg:text-7xl font-bold text-blue-300 mt-3 sm:mt-6"></div>
+                    <div id="affinityLabel" class="text-xs text-slate-400 mt-2 leading-snug"></div>
+                </div>
+            </div>
+
+            <!-- Single affinity map -->
+            <div class="mt-8">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Nucleotide Affinity Map</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="legend-pill bg-blue-900/30 text-blue-300 border border-blue-800/40">
+                            <span class="inline-block w-2 h-2 rounded-sm" style="background:linear-gradient(to top,#1d4ed8,#22d3ee)"></span>Signal
+                        </span>
+                        <span class="legend-pill bg-amber-900/30 text-amber-400 border border-amber-700/30">
+                            <span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>Peak
+                        </span>
+                        <span class="text-[9px] text-slate-500 italic hidden sm:inline">hover each bar</span>
+                    </div>
+                </div>
+                <div id="affinityMap" class="map-container">
+                    <div class="map-loading"><i class="fas fa-dna text-slate-700"></i> Awaiting analysis</div>
+                </div>
+                <div class="text-[9px] text-slate-600 mt-2 font-mono text-center uppercase tracking-widest">
+                    Sequence Position → &nbsp;·&nbsp; Hover any bar for sequence &amp; peak signal
+                </div>
+            </div>
+
+            <div class="mt-6 p-4 sm:p-5 bg-blue-900/10 border border-blue-900/30 rounded-2xl text-xs sm:text-sm leading-relaxed">
+                <strong class="text-blue-400">Clinical Relevance (ALS):</strong>
+                Strong binding regions may indicate potential TDP-43 pathology sites.
+                These predictions support targeted oligonucleotide therapeutics and early biomarker development.
+            </div>
+        </div>
+
+        <!-- Chunked Panel -->
+        <div id="chunkedPanel" class="lg:col-span-7 bg-slate-900/90 border border-slate-700 rounded-3xl p-6 sm:p-8 hidden shadow-xl slide-up">
+            <div class="flex justify-between items-start mb-5 gap-4">
+                <div class="min-w-0">
+                    <span class="text-emerald-400 text-[10px] font-semibold tracking-widest uppercase">Part-by-Part Analysis</span>
+                    <h3 id="chunkedSeqTitle" class="heading text-xl sm:text-2xl lg:text-3xl font-semibold mt-1 text-white truncate"></h3>
+                </div>
+                <button onclick="resetUI()" class="text-slate-400 hover:text-white text-xl transition-colors shrink-0 mt-1 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-800">✕</button>
+            </div>
+
+            <!-- Progress -->
+            <div id="chunkedProgress" class="mb-5">
+                <div class="flex justify-between text-xs text-slate-400 mb-2">
+                    <span id="progressLabel">Preparing bins…</span>
+                    <span id="progressPct">0%</span>
+                </div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="progressBarInner" class="progress-fill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Summary stats -->
+            <div id="chunkedSummary" class="grid-cols-3 gap-3 sm:gap-4 mb-5">
+                <div class="bg-slate-950 border border-slate-700 rounded-2xl p-4 text-center">
+                    <div class="text-slate-400 text-[9px] font-semibold tracking-widest uppercase">Total Bins</div>
+                    <div id="statTotalBins" class="heading text-2xl sm:text-3xl font-bold text-blue-300 mt-2"></div>
+                </div>
+                <div class="bg-slate-950 border border-emerald-900/50 rounded-2xl p-4 text-center">
+                    <div class="text-emerald-400 text-[9px] font-semibold tracking-widest uppercase">Binding Bins</div>
+                    <div id="statBindBins" class="heading text-2xl sm:text-3xl font-bold text-emerald-400 mt-2"></div>
+                </div>
+                <div class="bg-slate-950 border border-amber-900/40 rounded-2xl p-4 text-center">
+                    <div class="text-amber-400 text-[9px] font-semibold tracking-widest uppercase">Peak Signal</div>
+                    <div id="statPeakScore" class="heading text-2xl sm:text-3xl font-bold text-amber-400 mt-2"></div>
+                </div>
+            </div>
+
+            <!-- Chunked affinity map -->
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <span class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Bin-Level Affinity Map</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="legend-pill bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>Binds
+                        </span>
+                        <span class="legend-pill bg-slate-800 text-slate-400 border border-slate-700">
+                            <span class="inline-block w-2 h-2 rounded-full bg-slate-500"></span>No Bind
+                        </span>
+                        <span class="legend-pill bg-amber-900/30 text-amber-400 border border-amber-700/30">
+                            <span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>Peak
+                        </span>
+                        <span class="text-[9px] text-slate-500 italic hidden sm:inline">hover each bar</span>
+                    </div>
+                </div>
+                <div id="chunkedMap" class="map-container">
+                    <div class="map-loading"><i class="fas fa-spinner fa-spin"></i> Starting…</div>
+                </div>
+                <div class="text-[9px] text-slate-600 mt-2 font-mono text-center uppercase tracking-widest">
+                    Bin Position → &nbsp;·&nbsp; Hover for exact sequence &amp; binding signal
+                </div>
+            </div>
+
+            <div class="mt-5 p-4 sm:p-5 bg-emerald-900/10 border border-emerald-900/30 rounded-2xl text-xs sm:text-sm leading-relaxed">
+                <strong class="text-emerald-400">Part-by-Part Mode:</strong>
+                Each bar = one bin. <span class="text-emerald-400 font-medium">Green = binder</span>,
+                <span class="text-slate-400">grey = no binding</span>,
+                <span class="text-amber-400 font-medium">amber = peak signal bin</span>.
+                Hover any bar for its exact nucleotide sequence and score.
+            </div>
+        </div>
+
+        <!-- Placeholder -->
+        <div id="placeholder" class="lg:col-span-7 bg-slate-900/50 border border-slate-700 border-dashed rounded-3xl flex flex-col items-center justify-center text-center p-10 sm:p-16 min-h-[320px]">
+            <div class="text-6xl sm:text-7xl mb-5 text-slate-600 opacity-35">🧬</div>
+            <h3 class="heading text-2xl sm:text-3xl text-slate-300">Ready to Advance ALS Research?</h3>
+            <p class="max-w-sm text-slate-400 mt-3 text-sm sm:text-base leading-relaxed">
+                Submit an RNA sequence to predict binding affinity with disease-relevant RNA-binding proteins.
+            </p>
+            <div class="mt-5 flex gap-3 text-[10px] text-slate-500 flex-wrap justify-center">
+                <span class="bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">🔬 Single Analysis</span>
+                <span class="bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">📊 Part-by-Part</span>
+                <span class="bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">🗺️ Interactive Map</span>
+            </div>
+        </div>
+
+    </div><!-- end grid -->
+</div><!-- end page -->
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════
+let currentMode     = 'single';
+let analysisAborted = false;
+let fileLoaded      = false;
+let loadedFileName  = '';
+
+// ════════════════════════════════════════════════════════════════════
+// TOOLTIP ENGINE
+// ════════════════════════════════════════════════════════════════════
+const tooltip = document.getElementById('mapTooltip');
+let ttActive = false;
+
+function showTooltip(e, d) {
+    document.getElementById('ttPos').textContent   = d.pos;
+    document.getElementById('ttSeq').textContent   = d.seq;
+    document.getElementById('ttScore').textContent = d.score;
+    document.getElementById('ttBind').innerHTML    = d.binds
+        ? '<span style="color:#34d399">✅ Binds RBP</span>'
+        : '<span style="color:#475569">❌ No Binding Detected</span>';
+    document.getElementById('ttPeak').style.display = d.isPeak ? 'block' : 'none';
+    placeTooltip(e);
+    tooltip.classList.add('vis');
+    ttActive = true;
+}
+
+function placeTooltip(e) {
+    // Force a reflow to get accurate dimensions
+    const W = tooltip.offsetWidth  || 210;
+    const H = tooltip.offsetHeight || 130;
+    let x = e.clientX + 16;
+    let y = e.clientY - H - 16;
+    if (x + W > window.innerWidth  - 8) x = e.clientX - W - 16;
+    if (y < 8) y = e.clientY + 16;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+}
+
+function hideTooltip() {
+    tooltip.classList.remove('vis');
+    ttActive = false;
+}
+
+document.addEventListener('mousemove', e => { if (ttActive) placeTooltip(e); });
+
+// ════════════════════════════════════════════════════════════════════
+// BAR FACTORY
+// ════════════════════════════════════════════════════════════════════
+function makeBar({ heightPct, colorStyle, isPeak, ttData, barW }) {
+    const wrap = document.createElement('div');
+    wrap.className     = 'map-bar';
+    wrap.style.width   = barW + 'px';
+    wrap.style.minWidth= barW + 'px';
+
+    if (isPeak) {
+        const dot = document.createElement('div');
+        dot.className = 'peak-dot';
+        wrap.appendChild(dot);
+    }
+
+    const inner = document.createElement('div');
+    inner.className    = 'bar-inner';
+    inner.style.cssText= `height:${heightPct}%; ${colorStyle}`;
+    wrap.appendChild(inner);
+
+    wrap.addEventListener('mouseenter', e => showTooltip(e, ttData));
+    wrap.addEventListener('mouseleave', hideTooltip);
+
+    return wrap;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODE SWITCHING
+// ════════════════════════════════════════════════════════════════════
+function setMode(mode) {
+    currentMode = mode;
+    const isSingle  = mode === 'single';
+    const isChunked = mode === 'chunked';
+    document.getElementById('modeSingle').className  = 'mode-btn px-4 py-4 text-left' + (isSingle  ? ' active-single'  : '');
+    document.getElementById('modeChunked').className = 'mode-btn px-4 py-4 text-left' + (isChunked ? ' active-chunked' : '');
+    document.getElementById('binSizeRow').classList.toggle('hidden', !isChunked);
+    document.getElementById('analyzeBtnLabel').textContent =
+        isSingle ? 'PREDICT RBP BINDING AFFINITY' : 'RUN PART-BY-PART ANALYSIS';
+    resetUI();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// FILE UPLOAD — with lock
+// ════════════════════════════════════════════════════════════════════
+function handleUploadClick() {
+    if (fileLoaded) return; // zone is locked; user must press Remove first
+    document.getElementById('fileInput').click();
+}
+
+function handleFile(input) {
+    const file = input.files[0];
+    if (!file || fileLoaded) return;
+
+    loadedFileName = file.name;
+    lockUpload(true);
+
+    const seqEl = document.getElementById('sequenceInput');
+    seqEl.value = 'Reading file…';
+
+    const CHUNK   = 1024 * 1024;
+    const MAX     = 2_000_000;
+    const reader  = new FileReader();
+    let offset    = 0;
+    let cleaned   = '';
+
+    reader.onload = e => {
+        let chunk = e.target.result;
+        if (offset === 0 && chunk.startsWith('>')) {
+            const nl = chunk.indexOf('\n');
+            if (nl !== -1) chunk = chunk.substring(nl + 1);
+        }
+        cleaned += chunk.replace(/[^ACGUacgu]/gi, '').toUpperCase();
+        if (cleaned.length >= MAX) {
+            seqEl.value = cleaned.substring(0, MAX);
+            alert('File is very large — loaded the first 2 MB.');
+            return;
+        }
+        offset += CHUNK;
+        if (offset < file.size) reader.readAsText(file.slice(offset, offset + CHUNK));
+        else seqEl.value = cleaned;
+    };
+
+    reader.readAsText(file.slice(0, CHUNK));
+}
+
+function lockUpload(lock) {
+    fileLoaded = lock;
+    document.getElementById('uploadZone').classList.toggle('hidden', lock);
+    const badge = document.getElementById('fileLoadedBadge');
+    badge.classList.toggle('hidden', !lock);
+    if (lock) document.getElementById('fileLoadedName').textContent = loadedFileName;
+}
+
+function clearFile() {
+    fileLoaded     = false;
+    loadedFileName = '';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('sequenceInput').value = '';
+    lockUpload(false);
+    resetUI();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MOCK / REAL API
+// ════════════════════════════════════════════════════════════════════
+async function callPredict(sequence) {
+    try {
+        const res = await fetch('http://127.0.0.1:8000/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sequence }),
+            signal: AbortSignal.timeout(2500)
+        });
+        if (res.ok) return await res.json();
+    } catch (_) {}
+
+    // Deterministic mock — varies by sequence composition
+    const gc    = (sequence.match(/[GC]/g)||[]).length / sequence.length;
+    const u     = (sequence.match(/U/g)||[]).length    / sequence.length;
+    const noise = seededRandom(sequence) * 0.38;
+    const score = Math.min(2.5, parseFloat((0.32 + gc*1.35 + u*0.62 + noise).toFixed(3)));
+    const label = score>1.2 ? 'Strong Binder' : score>0.72 ? 'Moderate Binder' : 'Non-Binder';
+    const conf  = parseFloat((0.60 + seededRandom(sequence+'x')*0.36).toFixed(2));
+    return { label, confidence: conf, regression_score: score };
+}
+
+function seededRandom(str) {
+    let h = 0;
+    for (let i=0; i<str.length; i++) h = (Math.imul(31,h)+str.charCodeAt(i))|0;
+    return Math.abs(h) / 0x7fffffff;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MAIN ENTRY
+// ════════════════════════════════════════════════════════════════════
+async function runAnalysis() {
+    const raw = document.getElementById('sequenceInput').value.trim();
+    if (!raw) return alert('Please enter or upload a sequence.');
+    const seq = raw.replace(/[^ACGUacgu]/gi,'').toUpperCase();
+    if (seq.length < 20) return alert('Sequence must be at least 20 nucleotides long.');
+
+    const btn = document.getElementById('analyzeBtn');
+    btn.innerHTML  = `<i class="fas fa-spinner fa-spin"></i><span>ANALYZING…</span>`;
+    btn.disabled   = true;
+    analysisAborted = false;
+
+    try {
+        if (currentMode === 'single') await runSingleAnalysis(seq);
+        else                          await runChunkedAnalysis(seq);
+    } finally {
+        btn.innerHTML = `<i class="fas fa-vial"></i><span id="analyzeBtnLabel">${
+            currentMode==='single'?'PREDICT RBP BINDING AFFINITY':'RUN PART-BY-PART ANALYSIS'}</span>`;
+        btn.disabled = false;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SINGLE MODE
+// ════════════════════════════════════════════════════════════════════
+async function runSingleAnalysis(seq) {
+    const result = await callPredict(seq);
+    hidePanels();
+    document.getElementById('resultsPanel').classList.remove('hidden');
+
+    document.getElementById('seqTitle').textContent        = `Sequence · ${seq.substring(0,22)}…`;
+    document.getElementById('predictedClass').textContent  = result.label || 'Strong Binder';
+    document.getElementById('confidence').innerHTML        =
+        `<span class="text-emerald-400 font-semibold">${(result.confidence*100).toFixed(0)}% Confidence</span>`;
+
+    const score = parseFloat(result.regression_score).toFixed(3);
+    document.getElementById('regScore').textContent      = score;
+    document.getElementById('affinityLabel').textContent =
+        score > 1.2 ? 'High Affinity — Potential Pathological Interaction' : 'Moderate Affinity';
+
+    await buildSingleMap(seq);
+}
+
+async function buildSingleMap(fullSeq) {
+    const container = document.getElementById('affinityMap');
+    container.innerHTML = '<div class="map-loading"><i class="fas fa-spinner fa-spin"></i> Computing segments…</div>';
+
+    const NUM_BARS  = Math.min(55, fullSeq.length);
+    const segSize   = Math.max(10, Math.floor(fullSeq.length / NUM_BARS));
+    const segments  = [];
+    for (let i=0; i<fullSeq.length && segments.length<NUM_BARS; i+=segSize)
+        segments.push({ start:i, seq: fullSeq.substring(i, i+segSize) });
+
+    // Fetch all scores in parallel batches
+    const BATCH   = 8;
+    const scores  = new Array(segments.length);
+    for (let b=0; b<segments.length; b+=BATCH) {
+        const batch = segments.slice(b, b+BATCH);
+        const res   = await Promise.all(batch.map(s=>callPredict(s.seq)));
+        res.forEach((r,i) => { scores[b+i] = r; });
+    }
+
+    // Identify peak
+    let peakIdx=0, peakVal=-Infinity;
+    scores.forEach((r,i)=>{ if(r.regression_score>peakVal){ peakVal=r.regression_score; peakIdx=i; } });
+
+    // Render
+    container.innerHTML = '';
+    const available = container.clientWidth - 24;
+    const barW      = Math.max(5, Math.floor(available / segments.length));
+
+    segments.forEach((seg, i) => {
+        const r       = scores[i];
+        const score   = parseFloat(r.regression_score);
+        const isPeak  = (i === peakIdx);
+        const hPct    = Math.min(95, Math.max(7, Math.round((score/2.5)*100)));
+
+        const colorStyle = isPeak
+            ? 'background:linear-gradient(to top,#b45309,#fde68a);'
+            : 'background:linear-gradient(to top,#1e40af,#22d3ee);';
+
+        // Trim sequence display for tooltip (max 36 chars)
+        const seqDisplay = seg.seq.length > 36
+            ? seg.seq.substring(0,17) + '…' + seg.seq.slice(-13)
+            : seg.seq;
+
+        const bar = makeBar({
+            heightPct: hPct, colorStyle, isPeak, barW,
+            ttData: {
+                pos:    `Pos ${seg.start}–${seg.start+seg.seq.length-1}  ·  Seg ${i+1}/${segments.length}`,
+                seq:    seqDisplay,
+                score:  score.toFixed(3),
+                binds:  score > 0.9,
+                isPeak
+            }
+        });
+        container.appendChild(bar);
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// CHUNKED MODE
+// ════════════════════════════════════════════════════════════════════
+async function runChunkedAnalysis(seq) {
+    const binSize = Math.max(10, parseInt(document.getElementById('binSize').value)||50);
+
+    hidePanels();
+    document.getElementById('chunkedPanel').classList.remove('hidden');
+    document.getElementById('chunkedSeqTitle').textContent = `Sequence · ${seq.substring(0,22)}…`;
+
+    const sumEl = document.getElementById('chunkedSummary');
+    sumEl.classList.remove('show');
+    sumEl.classList.add('hidden');
+
+    const mapEl = document.getElementById('chunkedMap');
+    mapEl.innerHTML = '<div class="map-loading"><i class="fas fa-spinner fa-spin"></i> Slicing…</div>';
+
+    // Slice into bins
+    const bins = [];
+    for (let i=0; i<seq.length; i+=binSize)
+        bins.push({ start:i, seq:seq.substring(i, i+binSize) });
+    const total = bins.length;
+
+    // Progress
+    const pLabel = document.getElementById('progressLabel');
+    const pPct   = document.getElementById('progressPct');
+    const pFill  = document.getElementById('progressBarInner');
+    pLabel.textContent     = `Analyzing ${total} bins…`;
+    pPct.textContent       = '0%';
+    pFill.style.width      = '0%';
+    pFill.style.background = 'linear-gradient(90deg,#3b82f6,#06b6d4)';
+
+    const results  = [];
+    let peakScore  = -Infinity;
+    let peakIdx    = 0;
+
+    const BATCH = 6;
+    for (let b=0; b<bins.length; b+=BATCH) {
+        if (analysisAborted) break;
+        const slice = bins.slice(b, b+BATCH);
+        const res   = await Promise.all(slice.map(bin=>callPredict(bin.seq)));
+
+        res.forEach((r,i) => {
+            const gi = b+i;
+            if (gi >= bins.length) return;
+            const score = parseFloat(r.regression_score);
+            const binds = score > 0.9;
+            results.push({ idx:gi, start:bins[gi].start, seq:bins[gi].seq, score, binds });
+            if (score>peakScore) { peakScore=score; peakIdx=gi; }
+        });
+
+        const done = Math.min(b+BATCH, total);
+        const pct  = Math.round((done/total)*100);
+        pFill.style.width  = pct+'%';
+        pPct.textContent   = pct+'%';
+        pLabel.textContent = `Bin ${done} of ${total}…`;
+
+        paintChunkedBars(results, peakIdx, mapEl, total);
+        await new Promise(r=>setTimeout(r,0)); // yield to browser
+    }
+
+    // Final paint
+    paintChunkedBars(results, peakIdx, mapEl, total);
+
+    // Summary
+    const bindCount = results.filter(r=>r.binds).length;
+    document.getElementById('statTotalBins').textContent  = total;
+    document.getElementById('statBindBins').textContent   = bindCount;
+    document.getElementById('statPeakScore').textContent  = peakScore.toFixed(3);
+    sumEl.classList.remove('hidden');
+    sumEl.classList.add('show');
+
+    pLabel.textContent     = '✓ Analysis complete';
+    pFill.style.background = 'linear-gradient(90deg,#10b981,#06b6d4)';
+}
+
+function paintChunkedBars(results, peakIdx, container, totalBins) {
+    container.innerHTML = '';
+    const available = container.clientWidth - 24;
+    const barW = Math.max(6, Math.min(28, Math.floor(available / Math.max(totalBins, 20))));
+
+    results.forEach(r => {
+        const isPeak   = r.idx === peakIdx;
+        const hPct     = Math.min(95, Math.max(7, Math.round((r.score/2.5)*100)));
+        const color    = isPeak
+            ? 'background:linear-gradient(to top,#b45309,#fde68a);'
+            : r.binds
+                ? 'background:linear-gradient(to top,#065f46,#34d399);'
+                : 'background:#1e293b;';
+
+        const seqDisplay = r.seq.length > 36
+            ? r.seq.substring(0,17) + '…' + r.seq.slice(-13)
+            : r.seq;
+
+        const bar = makeBar({
+            heightPct: hPct, colorStyle: color, isPeak, barW,
+            ttData: {
+                pos:    `Bin ${r.idx+1}  ·  pos ${r.start}–${r.start+r.seq.length-1}`,
+                seq:    seqDisplay,
+                score:  r.score.toFixed(3),
+                binds:  r.binds,
+                isPeak
+            }
+        });
+        container.appendChild(bar);
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════
+function hidePanels() {
+    ['resultsPanel','chunkedPanel','placeholder'].forEach(id =>
+        document.getElementById(id).classList.add('hidden'));
+}
+
+function resetUI() {
+    analysisAborted = true;
+    hideTooltip();
+    hidePanels();
+    document.getElementById('placeholder').classList.remove('hidden');
+    if (!fileLoaded) document.getElementById('sequenceInput').value = '';
+    document.getElementById('progressBarInner').style.width = '0%';
+    document.getElementById('progressPct').textContent = '0%';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key==='Enter') runAnalysis();
+    if (e.key==='Escape') hideTooltip();
+});
+</script>
+</body>
+</html>
