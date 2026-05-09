@@ -213,8 +213,8 @@
             </div>
         </div>
         <div class="nav-links flex items-center gap-5 sm:gap-8 text-sm">
-            <a href="./background.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Background</a>
-            <a href="./clinical_impact.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Clinical Impact</a>
+            <a href="background.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Background</a>
+            <a href="clinical_impact.html" class="hover:text-blue-400 transition-colors whitespace-nowrap">Clinical Impact</a>
             <div class="bg-emerald-900/30 text-emerald-400 px-4 py-2 rounded-3xl text-xs sm:text-sm font-medium flex items-center gap-2 border border-emerald-500/20 whitespace-nowrap">
                 <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0"></div>
                 <span class="hidden sm:inline">Fighting ALS Together</span>
@@ -619,7 +619,7 @@ function clearFile() {
 // ════════════════════════════════════════════════════════════════════
 async function callPredict(sequence) {
     try {
-        const res = await fetch('http://127.0.0.1:8000/predict', {
+        const res = await fetch('https://mandipsapkota-binderr.hf.space/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sequence }),
