@@ -1,23 +1,62 @@
-The dataset required for this project, and the final model that was built can be found here: 
+#  Overview
 
-# Introduction
-This project ...
+The dataset and final model files for this project exceed GitHub’s file size limits. You can download all necessary assets from this [Google Drive folder](https://drive.google.com/drive/folders/1YBwlrvNZaNffMNS3tfqObjw4N9bJSTeF?usp=sharing).
 
-# Model Architecture 
-Distilbert + regression, classification head. 
+## Introduction
 
-# Data Preparation
+This project identifies protein binding sites within the human genome by leveraging transformer-based architectures and genomic data processing.
 
-# Running this project
+## Model Architecture
 
-## Machine Learning
-Find 
-create a venv 
-install required dependenccies by activating 
-pip install requirements
+The system uses a **DistilBERT** backbone adapted for genomic sequences, featuring both regression and classification heads to predict binding affinity and site presence.
 
-## Application
-create a venv 
-Add a model 
-Install requirements.txt
-rum uvicorn main:app --reload -p 80000
+## Data Preparation
+
+The pipeline processes genomic data using standard bioinformatic formats:
+
+* **.bed files:** Used to locate confirmed protein binding sites.
+* **.fa files:** Used to extract raw nucleotide sequences.
+* **.gtf files:** Used to define genomic regions for the negative dataset.
+* **Sampling:** Positive samples are drawn from exons, while negative samples are drawn from introns at a 3:1 ratio.
+
+## Setup and Installation
+
+### 1. Model Training
+
+To set up the environment for training or local experimentation:
+
+1. Create a virtual environment:
+`python -m venv venv`
+2. Activate the environment:
+* **Windows:** `.\venv\Scripts\activate`
+* **macOS/Linux:** `source venv/bin/activate`
+
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+
+```
+
+
+
+### 2. Running the Application
+
+To launch the API/Web interface:
+
+1. Create and activate a separate virtual environment.
+2. Place the downloaded model file into the root project directory.
+3. Install the application dependencies:
+
+```bash
+    pip install -r requirements.txt
+```
+4.  Start the server:
+    
+```bash
+    uvicorn main:app --reload --port 8000
+```
+5. Open the `index.html` file located in frontend folder.
+
+With this much being done, you are ready to go with the application.
+

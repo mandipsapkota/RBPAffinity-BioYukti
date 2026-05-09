@@ -3,25 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelixGuard — RNA Analysis Platform</title>
+    <title>Binderr - Clinical Impact</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
-       
+        
         body { font-family: 'Inter', sans-serif; background-color: #020617; }
         .heading { font-family: 'Space Grotesk', sans-serif; }
         
-        /* Custom Scrollbar for Affinity Map and Textarea */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         .glass-panel {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(12px);
-            border: 1px border-slate-700;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .impact-card:hover {
+            border-color: rgba(96, 165, 250, 0.5);
+            box-shadow: 0 0 30px rgba(37, 99, 235, 0.1);
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
         }
     </style>
 </head>
@@ -38,19 +46,93 @@
             </div>
             <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
                 <a href="./index.html" class="hover:text-blue-400 transition-colors">Home</a>
-                <!-- <a href="./dashboard.html" class="hover:text-blue-400 transition-colors">Dashboard</a> -->
                 <a href="./background.html" class="hover:text-blue-400 transition-colors">Background</a>
-                <a href="#" class="hover:text-blue-400 transition-colors">Clinical Impact</a>
+                <a href="./clinical_impact.html" class="text-blue-400 border-b-2 border-blue-500/50 pb-1">Clinical Impact</a>
                 <div class="h-4 w-[1px] bg-slate-800"></div>
                 <div class="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
                     <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <span class="text-xs">ALS Research Active</span>
+                    <span class="text-xs font-semibold">ALS Live Lab Monitoring</span>
                 </div>
             </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-8 py-12">
+    <main class="max-w-7xl mx-auto px-8 py-16">
+        <!-- Hero Section -->
+        <div class="mb-16 text-center">
+            <h1 class="heading text-5xl font-bold mb-4 bg-gradient-to-r from-white via-blue-200 to-blue-500 bg-clip-text text-transparent">
+                Bench to Bedside: The Impact
+            </h1>
+            <p class="text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                Binderr isn't just a model—it's a digital telescope for the microscopic world. We're translating complex RNA sequences into actionable clinical breakthroughs.
+            </p>
+        </div>
+
+        <!-- Interactive Impact Grid -->
+        <div class="grid md:grid-cols-3 gap-8">
+            
+            <!-- Impact Card 1: Disease Mechanisms -->
+            <div class="impact-card glass-panel p-8 rounded-3xl transition-all duration-300 group cursor-default">
+                <div class="w-14 h-14 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+                <h3 class="heading text-xl font-bold mb-3 text-purple-300">Decoding the Model’s Gaze</h3>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    Ever wonder what an AI sees? Our <span class="text-purple-400 font-mono">Attention Map Interpretation</span> lets us visualize exactly where Binderr is looking.
+                </p>
+                <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-800 group-hover:border-purple-500/30 transition-colors">
+                    <span class="text-[10px] uppercase text-slate-500 font-bold block mb-2 tracking-widest">Case Study: FTD Mutation</span>
+                    <p class="text-xs text-slate-300 italic">"Model pinpointed specific mutation markers, revealing the 'why' behind TDP-43 misbinding for the first time."</p>
+                </div>
+            </div>
+
+            <!-- Impact Card 2: Early Detection -->
+            <div class="impact-card glass-panel p-8 rounded-3xl transition-all duration-300 group cursor-default border-t-2 border-t-blue-500/20">
+                <div class="w-14 h-14 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:rotate-12 transition-transform">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <h3 class="heading text-xl font-bold mb-3 text-blue-300">Molecular Early Warning</h3>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    Powered by a hyper-fast <span class="text-blue-400 font-mono">DistilBERT</span> backend, Binderr scans blood-based RNA markers in milliseconds.
+                </p>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase">
+                        <span>Scanning Speed</span>
+                        <span class="text-blue-400">98% Faster</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="w-[98%] h-full bg-blue-500 shadow-[0_0_10px_#3b82f6]"></div>
+                    </div>
+                    <p class="text-xs text-blue-400/80 mt-2">Flagging "Affinity Shifts" long before the first clinical symptom appears.</p>
+                </div>
+            </div>
+
+            <!-- Impact Card 3: Scalable Screening -->
+            <div class="impact-card glass-panel p-8 rounded-3xl transition-all duration-300 group cursor-default">
+                <div class="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:animate-pulse">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <h3 class="heading text-xl font-bold mb-3 text-emerald-300">In-Silico Drug Lab</h3>
+                <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                    Why spend years in a wet lab when you can simulate? Rapidly screen thousands of <span class="text-emerald-400 font-mono">Antisense Oligonucleotides (ASOs)</span> digitally.
+                </p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3 text-xs text-slate-300">
+                        <i class="fa-solid fa-check text-emerald-500"></i> Predict Binding Efficiency
+                    </li>
+                    <li class="flex items-center gap-3 text-xs text-slate-300">
+                        <i class="fa-solid fa-check text-emerald-500"></i> Combat Toxic Protein Clumping
+                    </li>
+                    <li class="flex items-center gap-3 text-xs text-slate-300">
+                        <i class="fa-solid fa-check text-emerald-500"></i> Optimize Therapeutic Design
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+
+
     </main>
+
 </body>
 </html>
