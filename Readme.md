@@ -20,6 +20,7 @@ The pipeline processes genomic data using standard bioinformatic formats:
 * **Sampling:** Positive samples are drawn from exons, while negative samples are drawn from introns at a 3:1 ratio.
 
 ## Setup and Installation
+You can either see how we trained the model, or use our app using a model that we already trained. 
 
 ### 1. Model Training
 
@@ -37,6 +38,7 @@ To set up the environment for training or local experimentation:
 pip install -r requirements.txt
 
 ```
+4. Run the notebook present in notebooks/rbp-prediction-pipeline-tdp43.ipynb. The required file can be found in google drive mentioned at the top of this readme.
 
 
 
@@ -45,7 +47,7 @@ pip install -r requirements.txt
 To launch the API/Web interface:
 
 1. Create and activate a separate virtual environment.
-2. Place the downloaded model file into the root project directory.
+2. Place the downloaded model file into backend/idp43_2.0/model_weights.pth.
 3. Install the application dependencies:
 
 ```bash
@@ -59,4 +61,3 @@ To launch the API/Web interface:
 5. Open the `index.html` file located in frontend folder.
 
 With this much being done, you are ready to go with the application.
-
