@@ -22,6 +22,12 @@
 By leveraging transformer-based deep learning (DistilBERT) with dual regression/classification heads, Binderr accelerates the discovery of therapeutic interventions and provides critical insights into disease mechanisms at a fraction of traditional experimental costs.
 
 ---
+NOTE : Model weight and data required exceed GitHub's file size limits. Download from [Google Drive](https://drive.google.com/drive/folders/1YBwlrvNZaNffMNS3tfqObjw4N9bJSTeF?usp=sharing):
+
+---
+
+
+---
 
 ## 🚨 The Problem: Why This Matters
 
@@ -55,21 +61,21 @@ Binderr combines the power of **DistilBERT** (a lightweight BERT variant optimiz
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   BINDERR ARCHITECTURE                   │
+│                   BINDERR ARCHITECTURE                  │
 ├─────────────────────────────────────────────────────────┤
-│                                                           │
+│                                                         │
 │  Input: RNA Sequence (k-mer transformed)                │
-│          ↓                                                │
+│          ↓                                              │
 │  ┌──────────────────────────────────────┐               │
-│  │    DistilBERT Backbone (768-dim)    │               │
+│  │    DistilBERT Backbone (768-dim)    │                │ 
 │  │  - 6 transformer layers              │               │
 │  │  - Multi-head attention              │               │
 │  │  - Contextual embeddings             │               │
 │  └──────────────────────────────────────┘               │
-│          ↓          ↓                                     │
-│     [CLS Token Representation]                           │
-│      (768 dimensions)                                    │
-│          ↙          ↖                                     │
+│          ↓          ↓                                   │
+│     [CLS Token Representation]                          │
+│      (768 dimensions)                                   │
+│          ↙          ↖                                  │
 │  ┌──────────────┐  ┌──────────────────┐                │
 │  │ CLASS HEAD   │  │ REGRESSION HEAD  │                │
 │  ├──────────────┤  ├──────────────────┤                │
@@ -79,10 +85,10 @@ Binderr combines the power of **DistilBERT** (a lightweight BERT variant optimiz
 │  │ FC: 256→2    │  │ FC: 256→1        │                │
 │  │ Softmax      │  │ ReLU (binding)   │                │
 │  └──────────────┘  └──────────────────┘                │
-│       ↓                   ↓                               │
+│       ↓                   ↓                            │
 │  Binary Classification  Continuous Affinity Score       │
-│  (Binds / Non-Binds)    (0.0 - max affinity)           │
-│                                                           │
+│  (Binds / Non-Binds)    (0.0 - max affinity)            │
+│                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -214,7 +220,7 @@ Model Training
 
 Visit the deployed Binderr instance on HuggingFace Spaces:
 ```
-https://huggingface.co/spaces/mandipsapkota/binderr
+https://biojukti.netlify.app
 ```
 
 ### Option 2: Local Installation
@@ -228,8 +234,8 @@ https://huggingface.co/spaces/mandipsapkota/binderr
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/binderr.git
-cd binderr
+git clone https://github.com/mandipsapkota/RBPAffinity-BioYukti.git
+cd RBPAffinity-BioYukti
 
 # Create virtual environment
 python -m venv venv
