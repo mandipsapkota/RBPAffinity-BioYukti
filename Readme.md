@@ -1,6 +1,4 @@
-```
-Note : Download model_weights.pth or train a model by using notebooks/tdp43_prediction and put it in backend/tdp433_2.0 for the webapp to work properly
-```
+The required resources for this project can be found here: 
 
 # Introduction
 This project ...
